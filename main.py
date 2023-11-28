@@ -32,7 +32,7 @@ def gen_surface(n=3):
     def f_final(x):
         if x>20 and x< 40:
             return 60
-        if x>60 and x<70:
+        if x>50 and x<70:
             return 5
         f_all = [func(x) for func in sines]
         res = sum(f_all)
@@ -42,33 +42,43 @@ def gen_surface(n=3):
     return f_final
 
 if __name__==   "__main__":
-    np.random.seed(1)
-    n_steps = 40
+    np.random.seed(2)
+    n_steps = 30
     num_particles = 1000
 
     surf_func = gen_surface()
     # propogate test
-    x0 = [17,30,-.1,.2,-1,0]
+    x0 = [37,20,-.1,-2,-1,0]
     motor_forces = np.ones([n_steps,2])*.55
+    # motor_forces[int(n_steps/2):,:] = 0
     x = np.zeros([n_steps,6])
+    pos_est = np.zeros([n_steps,2])
     x[0,:] = x0
 
     #initialize particles
 
-    X = pf.initializeParticles(x_lim=[x0[0]-10,x0[0]+80], y_lim=[x0[1]-40,x0[1]+10],surface_func=surf_func,n=num_particles)
+    X = pf.initializeParticles(x_lim=[x0[0]-10,x0[0]+80], y_lim=[x0[1]-60,x0[1]+10],surface_func=surf_func,n=num_particles)
     particle_history = np.zeros([n_steps,num_particles,2])
     particle_history[0,:,:] = X
 
     # loop through the motion
     for i in range(1,n_steps):
         print(f"Loop {i}")
+        # fig,ax=plt.subplots()
+        # ax = quad.plotInstant(ax,x[i-1,:],X,surf_func,xlim=(20,90),ylim=(-30,70))
+        # ax.invert_yaxis()
 
         #get true state
         x[i,:] = quad.propogate_step(x[i-1,:],motor_forces[i-1,:],Dt)
 
         #run particles filter
-        X = pf.runMCL_step(X, copy.copy(x[i,:]),copy.copy(motor_forces[i-1,:]),surface_func=surf_func,Dt=Dt)
+        alt = abs(pf.getNoisyMeas(x[i-1,0],x[i-1,1],surface_fun=copy.copy(surf_func)))
+        X = pf.runMCL_step(X, alt, copy.copy(x[i-1,:]), copy.copy(motor_forces[i-1,:]), surface_func=surf_func,Dt=Dt)
+        pos_est[i,0] = pf.get_estimate(X[:,0],0.25)
+        pos_est[i,1] = pf.get_estimate(X[:,1],0.25)
+        print(f"Est x pos: {pos_est[i,0]}, y pos: {pos_est[i,1]}")
         particle_history[i,:,:] = X
+
 
     
 

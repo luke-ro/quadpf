@@ -82,6 +82,21 @@ def plot_trajectory(ax,traj):
     # ax.plot(traj[:,0],traj[:,1])
     plotquad_traj(ax,traj)
 
+def plotInstant(ax,y,particles,surface,xlim,ylim):
+    x_quad,y_quad = plotquad_data(y)
+    ax.plot(x_quad,y_quad,label="Quadcopter",color="r")[0]
+    ax.scatter(particles[:,0],particles[:,1],label="Particles",s=1)
+
+    x_sur = np.linspace(xlim[0],xlim[1],100)
+    y_sur = [surface(val) for val in x_sur]
+    ax.plot(x_sur,y_sur,label="Ground",color="g")
+    ax.fill_between(x_sur,y_sur,np.ones(100)*ylim[1],color="g",alpha = 0.5)
+
+    ax.invert_yaxis()
+    ax.set(xlim=xlim,ylim=ylim,xlabel="x [m]",ylabel="y [m]")
+    return ax
+
+
 def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
     # https://www.geeksforgeeks.org/using-matplotlib-for-animations/
     fig,ax = plt.subplots()
@@ -95,12 +110,12 @@ def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
     scat = ax.scatter(particles[0,:,0],particles[0,:,1],label="Particles",s=1)
 
     if surface is not None:
-        x_sur = np.linspace(x_min,x_max,len(traj))
+        x_sur = np.linspace(x_min,x_max,100)
         y_sur = [surface(val) for val in x_sur]
         ax.plot(x_sur,y_sur,label="Ground",color="g")
         if np.max(y_sur)+buffer>z_max:
             z_max=np.max(y_sur) + buffer
-        ax.fill_between(x_sur,y_sur,np.ones(len(traj))*z_max,color="g",alpha = 0.5)
+        ax.fill_between(x_sur,y_sur,np.ones(100)*z_max,color="g",alpha = 0.5)
 
     ax.set(xlim=[x_min,x_max],ylim=[z_min,z_max],xlabel="x [m]",ylabel="y [m]")
     ax.invert_yaxis()
