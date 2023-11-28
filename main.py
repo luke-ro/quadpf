@@ -3,6 +3,10 @@ import random
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import quad
+import pf
+import copy
+
+Dt=0.1 # timestep for sim
 
 def gen_surface(n=3):
     sines = []
@@ -20,9 +24,9 @@ def gen_surface(n=3):
     #     # print(sines)
 
 
-    sines.append(lambda x : 5*np.cos(2*3.14/400*x))
-    sines.append(lambda x : 10*np.cos(2*3.14/150*(x+10)))
-    sines.append(lambda x : 10*np.cos(2*3.14/25*(x+5)))
+    sines.append(lambda x : 5*np.cos(2*3.14/400*x)+10)
+    sines.append(lambda x : 10*np.cos(2*3.14/150*(x+10))+10)
+    sines.append(lambda x : 10*np.cos(2*3.14/25*(x+5))+10)
     
     # f_final = lambda x : np.sum([func(x) for func in sines])
     def f_final(x):
@@ -37,26 +41,37 @@ if __name__==   "__main__":
     # np.random.seed(1)
     n = 100
 
-    # Surface test
-    func = gen_surface()
-    print(func(0))
-    x = np.linspace(0,100,n)
-    y = [func(val) for val in x]
-
-    fig,ax = plt.subplots()
-    ax.plot(x,y)
-
-
+    surf_func = gen_surface()
     # propogate test
-    x0 = [0,-25,-.1,0,0,0]
-    motor_forces = [0.49, 0.49]
+    x0 = [0,0,-.1,0,0,0]
+    motor_forces = np.ones([n,2])*.49
     x = np.zeros([n,6])
     x[0,:] = x0
-    for i in range(1,n):
-        x[i,:] = quad.propogate_step(x[i-1,:],motor_forces,0.1)
 
-    particles = np.zeros([n,10,10])
-    anim = quad.animate_traj(traj=x, particles=particles,surface=func)
+    #initialize particles
+    num_particles = 1000
+
+    X = pf.initializeParticles(x_lim=[-25,25],y_lim=[0,0],surface_func=surf_func,n=num_particles)
+    particle_history = np.zeros([n,num_particles,2])
+    particle_history[0,:,:] = X
+
+    # loop through the motion
+    for i in range(1,n):
+        print(f"Loop {i}")
+
+        #get true state
+        x[i,:] = quad.propogate_step(x[i-1,:],motor_forces[i-1,:],Dt)
+
+        #run particles filter
+        X = pf.runMCL_step(X,copy.copy(x[i-1,:]),copy.copy(motor_forces[i-1,:]),surface_func=surf_func,Dt=Dt)
+        particle_history[i,:,:] = X
+
+    
+
+    # partics = pf.runParticleFilter(x_lim=[0,100],y_lim=[0,100],state_vec=copy.copy(x),motion_commands=motor_forces,surface_fun=surf_func,Dt=Dt)
+
+    # partics = np.zeros([n,10,10])
+    anim = quad.animate_traj(traj=x, particles=particle_history, surface=surf_func,frame_time=200)
     # quad.plot_trajectory(ax,x)
     # ax.set_aspect('equal', 'box')
 

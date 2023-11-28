@@ -2,7 +2,7 @@ import numpy as np
 import scipy.stats as stats
 import quad
 
-ALT_NOISE_STD = 3 #std dev of altimeter measurements
+ALT_NOISE_STD = 1 #std dev of altimeter measurements
 
 def getNoisyMeas(z,surface_fun):
     return z-surface_fun(z) + np.random.normal(0,ALT_NOISE_STD)
@@ -14,7 +14,7 @@ def initializeParticles(x_lim,y_lim,surface_func,n=100):
     partics[:,1] = np.random.uniform(low=y_lim[0],high=y_lim[1],size=n)
     for i in range(len(partics)):
         j = 0
-        while(partics[i,1] < surface_func(partics[i,0])):
+        while(partics[i,1] > surface_func(partics[i,0])):
             partics[i,0] = np.random.uniform(low=x_lim[0],high=x_lim[1],size=1)
             partics[i,1] = np.random.uniform(low=y_lim[0],high=y_lim[1],size=1)
             if(j>30):
@@ -25,7 +25,8 @@ def initializeParticles(x_lim,y_lim,surface_func,n=100):
 
 def runMCL_step(particles,y,motor_command,surface_func,Dt):
     n = len(particles)
-    alt_meas = getNoisyMeas(y[1],surface_fun=surface_func)
+    alt_meas = -abs(getNoisyMeas(y[1],surface_fun=surface_func))
+    probs = np.zeros([n])
     for i in range(len(particles)):
         #given at location specified by particle, what are the odds you'd be there?
 
@@ -35,24 +36,36 @@ def runMCL_step(particles,y,motor_command,surface_func,Dt):
 
         # propogate motion using particle's pos, and given state for vel and angular position
         particles[i,:] = quad.propogate_step(temp_state, motor_command, Dt)[0:2] 
+        particles[i,:] += np.random.normal(0,0.1,size=[2])
         # add noise?
 
-        diff = abs(alt_meas-surface_func(particles[i,0]))
+        diff = abs(alt_meas-(particles[i,1]-surface_func(particles[i,0])))
         probs[i] = 2*stats.norm.cdf(-diff,scale=ALT_NOISE_STD) # two tailed distrobution probabilty of getting a worse or same measurement
 
     # normalize probabilities to one
     probs = probs/np.sum(probs)
+
+    #get a cdf of current particles
+    probs_cdf=np.zeros(n)
+    probs_cdf[0] = probs[0]
+    for i in range(1,n):
+        probs_cdf[i] = probs_cdf[i-1]+probs[i]
     
     ## Resample
 
+    rands = np.random.rand(n)
+    new_particles = np.array([particles[np.argmax(probs_cdf>rands[i])] for i in range(n)])
+
     #iterate through particles and select them probabilistically according to their prob
-    i = 0
-    new_particles = np.zeros([n,2])
-    while i < n:
-        idx = np.random.choice(range(n)) #randomly select a particle
-        if(np.random.rand() < probs[idx]): # if np.random.rand() is less than the probability of that particle, add it
-            new_particles[i,:] = particles[idx,:]
-            i += 1
+    # i = 0
+    # new_particles = np.zeros([n,2])
+    # while i < n:
+    #     idx = np.random.choice(range(n)) #randomly select a particle
+    #     if(np.random.rand() < probs[idx]): # if np.random.rand() is less than the probability of that particle, add it
+    #         new_particles[i,:] = particles[idx,:]
+    #         i += 1
+
+
 
     return new_particles
 

@@ -38,7 +38,7 @@ def dynamics(y):
 
     dy = np.array([dx,dz,dth,du,dw,dq,0,0,0])
     # print(dy)
-    print(th)
+    # print(th)
     return dy
 
 def rk4(fun,y0,dt):
@@ -67,7 +67,7 @@ def plotquad(ax,state):
 def plotquad_data(state):
     motor = rotate(-state[2],[0.5,0]) 
     x_pts = [state[0]-motor[0], state[0]+motor[0]]
-    y_pts = -np.array([state[1]-motor[1], state[1]+motor[1]])
+    y_pts = np.array([state[1]-motor[1], state[1]+motor[1]])
     return x_pts,y_pts
 
 def plotquad_traj(ax,traj):
@@ -82,30 +82,33 @@ def plot_trajectory(ax,traj):
     # ax.plot(traj[:,0],traj[:,1])
     plotquad_traj(ax,traj)
 
-def animate_traj(traj,particles,surface=None,buffer=10):
+def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
+    # https://www.geeksforgeeks.org/using-matplotlib-for-animations/
     fig,ax = plt.subplots()
     x_min = np.min(traj[:,0])-buffer
     x_max = np.max(traj[:,0])+buffer
-    z_min = np.min(-traj[:,1])-buffer
-    z_max = np.max(-traj[:,1])+buffer
+    z_min = np.min(traj[:,1])-buffer
+    z_max = np.max(traj[:,1])+buffer
 
-    scat = ax.scatter(particles[0,0,:],particles[0,1,:],label="Particles")
+    scat = ax.scatter(particles[0,:,0],particles[0,:,1],label="Particles",s=1)
     x_quad,y_quad = plotquad_data(traj[0,:])
     line2 = ax.plot(x_quad,y_quad,label="Quadcopter")[0]
 
     if surface is not None:
-        x_sur = np.linspace(x_min,x_max)
+        x_sur = np.linspace(x_min,x_max,len(traj))
         y_sur = [surface(val) for val in x_sur]
         ax.plot(x_sur,y_sur,label="Ground",color="g")
-        if np.min(y_sur)-buffer<z_min:
-            z_min=np.min(y_sur) - buffer
+        if np.max(y_sur)+buffer>z_max:
+            z_max=np.max(y_sur) + buffer
+        ax.fill_between(x_sur,y_sur,np.ones(len(traj))*z_max,color="g",alpha = 0.5)
 
     ax.set(xlim=[x_min,x_max],ylim=[z_min,z_max],xlabel="x [m]",ylabel="y [m]")
+    ax.invert_yaxis()
     ax.legend()
 
     def update(i):
-        par_x = np.squeeze(particles[i,0,:])
-        par_z = np.squeeze(particles[i,1,:])
+        par_x = np.squeeze(particles[i,:,0])
+        par_z = np.squeeze(particles[i,:,1])
         data = np.stack([par_x,par_z]).T
         scat.set_offsets(data)
 
@@ -115,6 +118,6 @@ def animate_traj(traj,particles,surface=None,buffer=10):
 
         return(scat,line2)
     
-    ani = FuncAnimation(fig=fig, func=update, frames = len(traj),interval=20)
+    ani = FuncAnimation(fig=fig, func=update, frames = len(traj),interval=frame_time)
     return ani
     
