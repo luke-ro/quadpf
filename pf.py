@@ -77,6 +77,9 @@ def get_estimate(x,step):
     # y_min = np.min(X[:,1])
     # y_max = np.max(X[:,1])
 
+    if x_max-x_min<step:
+        return (x_min+x_max)/2
+
 
     bins = np.arange(x_min,x_max+step,step)
     counts = np.histogram(x,bins)[0]
