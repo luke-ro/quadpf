@@ -6,7 +6,7 @@ import quad
 import pf
 import copy
 
-Dt=0.1 # timestep for sim
+Dt=0.3 # timestep for sim
 
 def gen_surface(n=3):
     sines = []
@@ -38,25 +38,25 @@ def gen_surface(n=3):
     return f_final
 
 if __name__==   "__main__":
-    # np.random.seed(1)
-    n = 100
+    np.random.seed(1)
+    n_steps = 40
+    num_particles = 1000
 
     surf_func = gen_surface()
     # propogate test
-    x0 = [0,0,-.1,0,0,0]
-    motor_forces = np.ones([n,2])*.49
-    x = np.zeros([n,6])
+    x0 = [0,30,-.1,.2,-1,0]
+    motor_forces = np.ones([n_steps,2])*.55
+    x = np.zeros([n_steps,6])
     x[0,:] = x0
 
     #initialize particles
-    num_particles = 1000
 
-    X = pf.initializeParticles(x_lim=[-25,25],y_lim=[0,0],surface_func=surf_func,n=num_particles)
-    particle_history = np.zeros([n,num_particles,2])
+    X = pf.initializeParticles(x_lim=[x0[0]-50,x0[0]+50],y_lim=[x0[1]-10,x0[1]+10],surface_func=surf_func,n=num_particles)
+    particle_history = np.zeros([n_steps,num_particles,2])
     particle_history[0,:,:] = X
 
     # loop through the motion
-    for i in range(1,n):
+    for i in range(1,n_steps):
         print(f"Loop {i}")
 
         #get true state
