@@ -12,8 +12,8 @@ def getNoisyMeas(x,z,surface_fun):
 def initializeParticles(x_lim,y_lim,surface_func,n=100):
     #initialize particles
     partics = np.zeros([n,2])
-    partics[:,0] = np.random.uniform(low=x_lim[0],high=x_lim[1],size=n)
-    partics[:,1] = np.random.uniform(low=y_lim[0],high=y_lim[1],size=n)
+    partics[:,0] = np.random.uniform(low=x_lim[0], high=x_lim[1], size=n)
+    partics[:,1] = np.random.uniform(low=y_lim[0], high=y_lim[1], size=n)
     for i in range(len(partics)):
         j = 0
         while(partics[i,1] > surface_func(partics[i,0])):
@@ -53,8 +53,7 @@ def runMCL_step(particles,y,motor_command,surface_func,Dt):
     for i in range(1,n):
         probs_cdf[i] = probs_cdf[i-1]+probs[i]
     
-    ## Resample
-
+    # Resample using a uniform dist and the cdf
     rands = np.random.rand(n)
     new_particles = np.array([particles[np.argmax(probs_cdf>rands[i])] for i in range(n)])
 

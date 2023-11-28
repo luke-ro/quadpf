@@ -90,9 +90,9 @@ def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
     z_min = np.min(traj[:,1])-buffer
     z_max = np.max(traj[:,1])+buffer
 
-    scat = ax.scatter(particles[0,:,0],particles[0,:,1],label="Particles",s=1)
     x_quad,y_quad = plotquad_data(traj[0,:])
-    line2 = ax.plot(x_quad,y_quad,label="Quadcopter")[0]
+    line2 = ax.plot(x_quad,y_quad,label="Quadcopter",color="r")[0]
+    scat = ax.scatter(particles[0,:,0],particles[0,:,1],label="Particles",s=1)
 
     if surface is not None:
         x_sur = np.linspace(x_min,x_max,len(traj))
