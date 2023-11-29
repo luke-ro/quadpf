@@ -57,7 +57,7 @@ if __name__==   "__main__":
 
     #initialize particles
 
-    X = pf.initializeParticles(x_lim=[x0[0]-20,x0[0]+80], y_lim=[x0[1]-60,x0[1]+10],surface_func=surf_func,n=num_particles)
+    X = pf.initializeParticles(x_lim=[x0[0]-20,x0[0]+80], y_lim=[x0[1]-60,x0[1]+30],surface_func=surf_func,n=num_particles)
     particle_history = np.zeros([n_steps,num_particles,2])
     particle_history[0,:,:] = X
 
@@ -86,6 +86,9 @@ if __name__==   "__main__":
 
     # partics = np.zeros([n,10,10])
     anim = quad.animate_traj(traj=x, particles=particle_history, surface=surf_func,frame_time=200)
+
+    anim.save('pf_animation.gif',  
+          writer = 'ffmpeg', fps = 4) 
     # quad.plot_trajectory(ax,x)
     # ax.set_aspect('equal', 'box')
 

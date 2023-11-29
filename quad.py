@@ -17,9 +17,8 @@ def rotate(ang,vec):
     return R@vec
 
 def dynamics(y):
-    # x = x0[0] # horizontal position inertial
-    # z = x0[1] # vertical position inertial
-    # print(y)
+    # x = x0[0] # horizontal position inertial (not used)
+    # z = x0[1] # vertical position inertial (not used)
     th = y[2] # pitch 
     u = y[3] # horz velocity body
     w = y[4] # vert velocity body 
