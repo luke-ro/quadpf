@@ -8,6 +8,30 @@ import copy
 
 Dt=0.3 # timestep for sim
 
+def getSSE(x1, x2):
+    if len(x1) != len(x2):
+        Exception("getSEE(): Vectors are not the same length")
+
+    sum = 0
+    for i in range(len(x1)):
+        sum += np.linalg.norm(x1[i,:]-x2[i,:])**2
+
+    return sum
+
+def plot1DTraj(ax,t,X):
+    means = np.zeros(len(X))
+    sig = np.zeros(len(X))
+    for i in range(len(X)):
+        means[i] = np.mean(X[i,:])
+        sig[i] = np.std(X[i,:])
+
+    ax.plot(t,means,label="Estimate")
+    ax.plot(t,means+sig,'--',color="orange",label="2$\\sigma$")
+    ax.plot(t,means-sig,'--',color="orange")
+
+
+
+
 def gen_surface(n=3):
     sines = []
     f_cos = lambda x,a,b,c : a*np.cos(b*(x+c))
@@ -22,7 +46,6 @@ def gen_surface(n=3):
     #     sines.append(f)
     #     print(a,b,c,f(0))
     #     # print(sines)
-
 
     sines.append(lambda x : 5*np.cos(2*3.14/400*x)+10)
     sines.append(lambda x : 10*np.cos(2*3.14/150*(x+10))+10)
@@ -43,8 +66,10 @@ def gen_surface(n=3):
 
 if __name__==   "__main__":
     np.random.seed(2)
-    n_steps = 6
+    n_steps = 30
     num_particles = 2000
+
+    t = np.arange(0,Dt*n_steps,Dt)
 
     surf_func = gen_surface()
     # propogate test
@@ -57,16 +82,16 @@ if __name__==   "__main__":
 
     #initialize particles
 
-    X = pf.initializeParticles(x_lim=[x0[0]-20,x0[0]+80], y_lim=[x0[1]-60,x0[1]+30],surface_func=surf_func,n=num_particles)
+    X = pf.initializeParticles(x_lim=[x0[0]-20,x0[0]+80], y_lim=[x0[1]-60,x0[1]+60],surface_func=surf_func,n=num_particles)
     particle_history = np.zeros([n_steps,num_particles,2])
     particle_history[0,:,:] = X
 
     # loop through the motion
     for i in range(1,n_steps):
         print(f"Loop {i}")
-        fig,ax=plt.subplots()
-        ax = quad.plotInstant(ax,x[i-1,:],X,surf_func,xlim=(20,90),ylim=(-40,70))
-        ax.invert_yaxis()
+        # fig,ax=plt.subplots()
+        # ax = quad.plotInstant(ax,x[i-1,:],X,surf_func,xlim=(20,90),ylim=(-40,70))
+        # ax.invert_yaxis()
 
         #get true state
         x[i,:] = quad.propogate_step(x[i-1,:],motor_forces[i-1,:],Dt)
@@ -80,12 +105,33 @@ if __name__==   "__main__":
         particle_history[i,:,:] = X
 
 
-    
+    print(f"SSE {getSSE(x[3:,0:2],pos_est[3:,:])}")
+
+    fig,ax = plt.subplots(2,1)
+    plot1DTraj(ax[0],t,np.squeeze(particle_history[:,:,0]))
+    ax[0].plot(t,x[:,0],color='r',label="Truth")
+    ax[0].legend()
+    ax[0].set_ylabel("x [m]")
+    ax[0].set_xlabel("t [s]")
+
+
+    plot1DTraj(ax[1],t,np.squeeze(particle_history[:,:,1]))
+    ax[1].plot(t,x[:,1],color='r',label="Truth")
+    ax[1].invert_yaxis()
+    ax[1].set_ylabel("y [m]")
+    ax[1].set_xlabel("t [s]")
+    # ax[1].legend()
+
+    # ax[0].set_xlim([3,8])
+    # ax[1].set_xlim([3,8])
+
+    fig.tight_layout()
 
     # partics = pf.runParticleFilter(x_lim=[0,100],y_lim=[0,100],state_vec=copy.copy(x),motion_commands=motor_forces,surface_fun=surf_func,Dt=Dt)
 
     # partics = np.zeros([n,10,10])
     anim = quad.animate_traj(traj=x, particles=particle_history, surface=surf_func,frame_time=200)
+
 
     anim.save('pf_animation.gif',  
           writer = 'ffmpeg', fps = 4) 

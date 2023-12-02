@@ -27,7 +27,7 @@ def dynamics(y):
     Fz = y[7] # force in z body
     pitch_moment = y[8] # moment about y 
 
-    # derivative states
+    # derivative state
     dx = np.cos(th)*u + np.sin(th)*w 
     dz = -np.sin(th)*u + np.cos(th)*w
     dth = np.cos(th)*q
@@ -36,8 +36,6 @@ def dynamics(y):
     dq = pitch_moment/Iy
 
     dy = np.array([dx,dz,dth,du,dw,dq,0,0,0])
-    # print(dy)
-    # print(th)
     return dy
 
 def rk4(fun,y0,dt):
@@ -118,7 +116,7 @@ def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
 
     ax.set(xlim=[x_min,x_max],ylim=[z_min,z_max],xlabel="x [m]",ylabel="y [m]")
     ax.invert_yaxis()
-    ax.legend()
+    ax.legend(loc="lower right")
 
     def update(i):
         par_x = np.squeeze(particles[i,:,0])
