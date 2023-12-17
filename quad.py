@@ -30,7 +30,7 @@ def dynamics(y):
     # derivative state
     dx = np.cos(th)*u + np.sin(th)*w 
     dz = -np.sin(th)*u + np.cos(th)*w
-    dth = np.cos(th)*q
+    dth = q
     du = -q*w + Fx/M  - g*np.sin(th)# Account for aerodynamics?
     dw = q*u + Fz/M + g*np.cos(th)# Account for aerodynamics?
     dq = pitch_moment/Iy
@@ -47,11 +47,8 @@ def rk4(fun,y0,dt):
     y1 = y0 + (dt/6) * (k1 + (2*k2) + (2*k3) + k4)
     return y1
 
-def propogate_step(x, motor_forces, Dt):
-    fx = 0
-    fz = -motor_forces[0] - motor_forces[1]
-    moment = ARM_LEN*(motor_forces[1]-motor_forces[0])
-    y0 = np.append(x,[fx,fz,moment])
+def propogate_step(x, u, Dt):
+    y0 = np.append(x,[0,u[0],u[1]])
     y = rk4(dynamics,y0,Dt)
     return y[0:6]
 

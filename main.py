@@ -6,7 +6,7 @@ import quad
 import pf
 import copy
 
-Dt=0.3 # timestep for sim
+Dt=0.6 # timestep for sim
 
 def getSSE(x1, x2):
     if len(x1) != len(x2):
@@ -30,7 +30,12 @@ def plot1DTraj(ax,t,X):
     ax.plot(t,means-sig,'--',color="orange")
 
 
-
+def motorToControls(motor_controls, l_arm):
+    u = np.zeros([2,len(motor_controls)])
+    for i,mc in enumerate(motor_controls):
+        u[0,i] = -mc[0] - mc[1]
+        u[1,i] = l_arm*(mc[1]-mc[0])
+    return u
 
 def gen_surface(n=3):
     sines = []
@@ -66,16 +71,19 @@ def gen_surface(n=3):
 
 if __name__==   "__main__":
     np.random.seed(2)
-    n_steps = 30
+    n_steps = 10
     num_particles = 2000
 
     t = np.arange(0,Dt*n_steps,Dt)
 
     surf_func = gen_surface()
     # propogate test
-    x0 = [37,0,-.1,2,-1,0]
-    motor_forces = np.ones([n_steps,2])*.6
-    motor_forces[int(n_steps/2):,:] = .1
+    x0 = [37,0,-.1,2,-1,0.5]
+    motor_forces = np.ones([n_steps,2]) *.6
+    controls = motorToControls(motor_forces,quad.ARM_LEN)
+    # motor_forces[:,0] = 0.45 
+    # motor_forces[:,1] = 0.55 
+    # motor_forces[int(n_steps/2):,:] = .1
     x = np.zeros([n_steps,6])
     pos_est = np.zeros([n_steps,2])
     x[0,:] = x0
@@ -94,15 +102,19 @@ if __name__==   "__main__":
         # ax.invert_yaxis()
 
         #get true state
-        x[i,:] = quad.propogate_step(x[i-1,:],motor_forces[i-1,:],Dt)
+        x[i,:] = quad.propogate_step(x[i-1,:],controls[:,i-1],Dt)
+        print(f"state: {x[i,:]}")
 
         #run particles filter
         alt = abs(pf.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
-        X = pf.runMCL_step(X, alt, copy.copy(x[i-1,:]), copy.copy(motor_forces[i-1,:]), surface_func=surf_func,Dt=Dt)
-        pos_est[i,0] = pf.get_estimate(X[:,0],0.25)
-        pos_est[i,1] = pf.get_estimate(X[:,1],0.25)
-        print(f"Est x pos: {pos_est[i,0]}, y pos: {pos_est[i,1]}")
+
+        X, curr_pos_est = pf.runMCL_step(X, copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt, surface_func=surf_func,Dt=Dt)
+        pos_est[i,:] = curr_pos_est
+        # pos_est[i,1] = pf.get_estimate(X[:,1],0.25)
         particle_history[i,:,:] = X
+
+
+        print(f"PF est x pos: {pos_est[i,0]}, y pos: {pos_est[i,1]}")
 
 
     print(f"SSE {getSSE(x[3:,0:2],pos_est[3:,:])}")

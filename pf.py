@@ -26,7 +26,7 @@ def initializeParticles(x_lim,y_lim,surface_func,n=100):
             j+=1
     return partics
 
-def runMCL_step(particles,meas,y,motor_command,surface_func,Dt):
+def runMCL_step(particles, x_prev, control, meas, surface_func, Dt):
     n = len(particles)
     alt_meas = meas
     probs = np.zeros([n])
@@ -34,11 +34,11 @@ def runMCL_step(particles,meas,y,motor_command,surface_func,Dt):
         #given at location specified by particle, what are the odds you'd be there?
 
         #assuming that everything except position is given,
-        temp_state = copy.copy(y)
+        temp_state = copy.copy(x_prev)
         temp_state[0:2] = particles[i,:] # <- fill vector with given states (except for pos)
 
         # propogate motion using particle's pos, and given state for vel and angular position
-        particles[i,:] = quad.propogate_step(temp_state, motor_command, Dt)[0:2] 
+        particles[i,:] = quad.propogate_step(temp_state, control, Dt)[0:2] 
         particles[i,:] += np.random.normal(0,0.1,size=[2])
         # add noise?
 
@@ -67,9 +67,11 @@ def runMCL_step(particles,meas,y,motor_command,surface_func,Dt):
     #         new_particles[i,:] = particles[idx,:]
     #         i += 1
 
+    x_est = get_estimate(new_particles[:,0],0.25)
+    y_est = get_estimate(new_particles[:,1],0.25)
+    
 
-
-    return new_particles
+    return new_particles, (x_est, y_est)
 
 def get_estimate(x,step):
     x_min = np.min(x)
