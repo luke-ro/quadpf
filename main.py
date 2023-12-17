@@ -2,9 +2,11 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
+import copy
+
 import quad
 import pf
-import copy
+import cm
 
 Dt=0.6 # timestep for sim
 
@@ -71,53 +73,56 @@ def gen_surface(n=3):
 
 if __name__==   "__main__":
     np.random.seed(2)
-    n_steps = 10
+    n_steps = 12
     num_particles = 2000
 
     t = np.arange(0,Dt*n_steps,Dt)
 
     surf_func = gen_surface()
     # propogate test
-    x0 = [37,0,-.1,2,-1,0.5]
+    x0 = [37,0,-.1,0,0,0]
     motor_forces = np.ones([n_steps,2]) *.6
     controls = motorToControls(motor_forces,quad.ARM_LEN)
     # motor_forces[:,0] = 0.45 
     # motor_forces[:,1] = 0.55 
     # motor_forces[int(n_steps/2):,:] = .1
     x = np.zeros([n_steps,6])
-    pos_est = np.zeros([n_steps,2])
+    pf_pos_est = np.zeros([n_steps,2])
     x[0,:] = x0
 
-    #initialize particles
-
+    #initialize PF 
     X = pf.initializeParticles(x_lim=[x0[0]-20,x0[0]+80], y_lim=[x0[1]-60,x0[1]+60],surface_func=surf_func,n=num_particles)
     particle_history = np.zeros([n_steps,num_particles,2])
     particle_history[0,:,:] = X
 
+    # initialize contour matching
+    x0_guess = np.zeros([6])
+    cm = cm.CM(surf_func,x0_guess,(-50,50))
+
     # loop through the motion
     for i in range(1,n_steps):
         print(f"Loop {i}")
-        # fig,ax=plt.subplots()
-        # ax = quad.plotInstant(ax,x[i-1,:],X,surf_func,xlim=(20,90),ylim=(-40,70))
-        # ax.invert_yaxis()
 
         #get true state
         x[i,:] = quad.propogate_step(x[i-1,:],controls[:,i-1],Dt)
         print(f"state: {x[i,:]}")
 
         #run particles filter
-        alt = abs(pf.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
+        alt_meas = abs(pf.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
 
-        X, curr_pos_est = pf.runMCL_step(X, copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt, surface_func=surf_func,Dt=Dt)
-        pos_est[i,:] = curr_pos_est
+        #run cm
+        cm_pos_est = cm.runCM(i,Dt,copy.copy(x[i-1,:]),copy.copy(controls[:,i-1]),alt_meas)
+
+        X, curr_pos_est = pf.runMCL_step(X, copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt_meas, surface_func=surf_func,Dt=Dt)
+        pf_pos_est[i,:] = curr_pos_est
         # pos_est[i,1] = pf.get_estimate(X[:,1],0.25)
         particle_history[i,:,:] = X
 
 
-        print(f"PF est x pos: {pos_est[i,0]}, y pos: {pos_est[i,1]}")
+        print(f"PF est x pos: {pf_pos_est[i,0]}, y pos: {pf_pos_est[i,1]}")
 
 
-    print(f"SSE {getSSE(x[3:,0:2],pos_est[3:,:])}")
+    print(f"SSE {getSSE(x[3:,0:2],pf_pos_est[3:,:])}")
 
     fig,ax = plt.subplots(2,1)
     plot1DTraj(ax[0],t,np.squeeze(particle_history[:,:,0]))
