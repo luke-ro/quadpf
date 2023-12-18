@@ -99,6 +99,8 @@ if __name__==   "__main__":
     x0_guess = np.zeros([6])
     cm = cm.CM(surf_func,x0_guess,(-50,50))
 
+    countour =[]
+
     # loop through the motion
     for i in range(1,n_steps):
         print(f"Loop {i}")
@@ -111,7 +113,7 @@ if __name__==   "__main__":
         alt_meas = abs(pf.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
 
         #run cm
-        cm_pos_est = cm.runCM(i,Dt,copy.copy(x[i-1,:]),copy.copy(controls[:,i-1]),alt_meas)
+        cm_pos_est, x_cm, countour = cm.runCM(i,Dt,copy.copy(x[i-1,:]),copy.copy(controls[:,i-1]),alt_meas)
 
         X, curr_pos_est = pf.runMCL_step(X, copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt_meas, surface_func=surf_func,Dt=Dt)
         pf_pos_est[i,:] = curr_pos_est
@@ -120,9 +122,16 @@ if __name__==   "__main__":
 
 
         print(f"PF est x pos: {pf_pos_est[i,0]}, y pos: {pf_pos_est[i,1]}")
+        print(f"CM est x pos: {cm_pos_est[0]}, y pos: {cm_pos_est[1]}")
 
 
     print(f"SSE {getSSE(x[3:,0:2],pf_pos_est[3:,:])}")
+
+
+    ## contour from CM plot
+    fig,ax = plt.subplots()
+    ax.plot(x_cm[1:,0], countour)
+    ax.set_title("countour")
 
     fig,ax = plt.subplots(2,1)
     plot1DTraj(ax[0],t,np.squeeze(particle_history[:,:,0]))
