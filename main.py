@@ -73,16 +73,17 @@ def gen_surface(n=3, mode=0):
     return f_final
 
 if __name__==   "__main__":
-    np.random.seed(2)
-    n_steps = 15
+    np.random.seed(3)
+    n_steps = 25
     num_particles = 4000
 
     t = np.arange(0,Dt*n_steps,Dt)
 
     surf_func = gen_surface(mode=1)
     # propogate test
-    x0 = [-116, -10, -.25, -5, 0, 0]
-    motor_forces = np.ones([n_steps,2]) *.55
+    # x0 = [-116, -10, -.25, -5, 0, 0]
+    x0 = [-116, -60, 0, 15, 0, 0]
+    motor_forces = np.ones([n_steps,2]) *.48
     controls = motorToControls(motor_forces,quad.ARM_LEN)
     # motor_forces[:,0] = 0.45 
     # motor_forces[:,1] = 0.55 
@@ -100,7 +101,10 @@ if __name__==   "__main__":
     # initialize contour matching
     x0_guess = np.zeros([6])
     x0_guess[0] = -100
-    cm = cm.CM(surf_func,x0_guess,50)
+    cm = cm.CM(surface_fun=surf_func,
+               x0=x0_guess,
+               search_lim=50,
+               match_interval=30)
     cm_pos_est = np.zeros([n_steps,2])
     cm_pos_est[0:2] = x0_guess[0:2]
 

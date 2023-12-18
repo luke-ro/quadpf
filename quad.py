@@ -27,12 +27,15 @@ def dynamics(y):
     Fz = y[7] # force in z body
     pitch_moment = y[8] # moment about y 
 
+    V = np.linalg.norm([u,w])
+    f_aero = -0.005*V**2
+
     # derivative state
     dx = np.cos(th)*u + np.sin(th)*w 
     dz = -np.sin(th)*u + np.cos(th)*w
     dth = q
-    du = -q*w + Fx/M  - g*np.sin(th)# Account for aerodynamics?
-    dw = q*u + Fz/M + g*np.cos(th)# Account for aerodynamics?
+    du = -q*w + Fx/M  - g*np.sin(th) + f_aero*np.cos(th)# Account for aerodynamics?
+    dw = q*u + Fz/M + g*np.cos(th) + f_aero*np.sin(th)# Account for aerodynamics?
     dq = pitch_moment/Iy
 
     dy = np.array([dx,dz,dth,du,dw,dq,0,0,0])
