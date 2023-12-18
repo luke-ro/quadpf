@@ -91,7 +91,7 @@ def plotInstant(ax,y,particles,surface,xlim,ylim):
     return ax
 
 
-def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
+def animate_traj(traj, particles, cm_est, surface=None, buffer=10, frame_time=30, xlim=None, ylim=None):
     # https://www.geeksforgeeks.org/using-matplotlib-for-animations/
     fig,ax = plt.subplots()
     x_min = np.min(traj[:,0])-buffer
@@ -99,9 +99,13 @@ def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
     z_min = np.min(traj[:,1])-buffer
     z_max = np.max(traj[:,1])+buffer
 
-    x_quad,y_quad = plotquad_data(traj[0,:])
-    line2 = ax.plot(x_quad,y_quad,label="Quadcopter",color="r")[0]
-    scat = ax.scatter(particles[0,:,0],particles[0,:,1],label="Particles",s=1)
+    if xlim is not None:
+        x_min = xlim[0]
+        x_max = xlim[1]
+
+    if ylim is not None:
+        z_min = ylim[0] 
+        z_max = ylim[1]
 
     if surface is not None:
         x_sur = np.linspace(x_min,x_max,100)
@@ -110,6 +114,12 @@ def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
         if np.max(y_sur)+buffer>z_max:
             z_max=np.max(y_sur) + buffer
         ax.fill_between(x_sur,y_sur,np.ones(100)*z_max,color="g",alpha = 0.5)
+
+    x_quad,y_quad = plotquad_data(traj[0,:])
+    line2 = ax.plot(x_quad,y_quad,label="Quadcopter",color="r")[0]
+    scat = ax.scatter(particles[0,:,0],particles[0,:,1],label="Particles",s=1)
+
+    cm_point = ax.scatter(cm_est[0],cm_est[1],marker="P")
 
     ax.set(xlim=[x_min,x_max],ylim=[z_min,z_max],xlabel="x [m]",ylabel="y [m]")
     ax.invert_yaxis()
@@ -120,6 +130,8 @@ def animate_traj(traj,particles,surface=None,buffer=10,frame_time=30):
         par_z = np.squeeze(particles[i,:,1])
         data = np.stack([par_x,par_z]).T
         scat.set_offsets(data)
+
+        cm_point.set_offsets(cm_est[i,0:2].T)
 
         x_quad,y_quad = plotquad_data(traj[i,:])
         line2.set_xdata(x_quad)

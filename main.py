@@ -81,15 +81,14 @@ if __name__==   "__main__":
 
     surf_func = gen_surface(mode=1)
     # propogate test
-    x0 = [-116, -10, -.1, 0, 0, 0]
-    motor_forces = np.ones([n_steps,2]) *.6
+    x0 = [-116, -10, -.25, -5, 0, 0]
+    motor_forces = np.ones([n_steps,2]) *.55
     controls = motorToControls(motor_forces,quad.ARM_LEN)
     # motor_forces[:,0] = 0.45 
     # motor_forces[:,1] = 0.55 
     # motor_forces[int(n_steps/2):,:] = .1
     x = np.zeros([n_steps,6])
     pf_pos_est = np.zeros([n_steps,2])
-    cm_pos_est = np.zeros([n_steps,2])
     
     x[0,:] = x0
 
@@ -102,8 +101,10 @@ if __name__==   "__main__":
     x0_guess = np.zeros([6])
     x0_guess[0] = -100
     cm = cm.CM(surf_func,x0_guess,50)
+    cm_pos_est = np.zeros([n_steps,2])
+    cm_pos_est[0:2] = x0_guess[0:2]
 
-    countour =[]
+    countour = []
 
     # loop through the motion
     for i in range(1,n_steps):
@@ -163,7 +164,12 @@ if __name__==   "__main__":
     # partics = pf.runParticleFilter(x_lim=[0,100],y_lim=[0,100],state_vec=copy.copy(x),motion_commands=motor_forces,surface_fun=surf_func,Dt=Dt)
 
     # partics = np.zeros([n,10,10])
-    anim = quad.animate_traj(traj=x, particles=particle_history, surface=surf_func,frame_time=200)
+    anim = quad.animate_traj(traj=x, 
+                             particles=particle_history, 
+                             cm_est=cm_pos_est, 
+                             surface=surf_func,
+                             frame_time=200,
+                             xlim = (-150,50))
 
 
     anim.save('pf_animation.gif',  
