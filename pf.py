@@ -10,23 +10,30 @@ def getNoisyMeas(x,z,surface_fun):
     return abs(z-surface_fun(x) + np.random.normal(0,ALT_NOISE_STD))
     # return abs(z-surface_fun(x))
 
-def initializeParticles(x_lim,y_lim,surface_func,n=100):
+def initializeParticles(surface_func,x_lim,y_lim=None,n=100):
     #initialize particles
-    partics = np.zeros([n,2])
-    partics[:,0] = np.random.uniform(low=x_lim[0], high=x_lim[1], size=n)
-    partics[:,1] = np.random.uniform(low=y_lim[0], high=y_lim[1], size=n)
-    for i in range(len(partics)):
-        j = 0
-        while(partics[i,1] > surface_func(partics[i,0])):
-            partics[i,0] = np.random.uniform(low=x_lim[0],high=x_lim[1],size=1)
-            partics[i,1] = np.random.uniform(low=y_lim[0],high=y_lim[1],size=1)
-            if(j>30):
-                print("unable to find valid sample in particle filter,this is bad")
-                break
-            j+=1
-    return partics
+    if y_lim is not None:
+    
+        partics = np.zeros([n,2])
+        partics[:,0] = np.random.uniform(low=x_lim[0], high=x_lim[1], size=n)
+        partics[:,1] = np.random.uniform(low=y_lim[0], high=y_lim[1], size=n)
+        for i in range(len(partics)):
+            j = 0
+            while(partics[i,1] > surface_func(partics[i,0])):
+                partics[i,0] = np.random.uniform(low=x_lim[0],high=x_lim[1],size=1)
+                partics[i,1] = np.random.uniform(low=y_lim[0],high=y_lim[1],size=1)
+                if(j>30):
+                    print("unable to find valid sample in particle filter,this is bad")
+                    break
+                j+=1
+        return partics
+    else:
+        partics = np.zeros([n,2])
+        partics[:,0] = np.random.uniform(low=x_lim[0], high=x_lim[1], size=n)
+        return partics
 
-def runMCL_step(particles, x_prev, control, meas, surface_func, Dt):
+
+def runMCL_step(particles, x_prev, control, meas, surface_func, Dt, oneD=False):
     n = len(particles)
     alt_meas = meas
     probs = np.zeros([n])
@@ -35,7 +42,12 @@ def runMCL_step(particles, x_prev, control, meas, surface_func, Dt):
 
         #assuming that everything except position is given,
         temp_state = copy.copy(x_prev)
-        temp_state[0:2] = particles[i,:] # <- fill vector with given states (except for pos)
+
+        if not oneD:
+            temp_state[0:2] = particles[i,:] # <- fill vector with given states (except for pos)
+        else:
+            temp_state[0:1] = particles[i,0] # <- fill vector with given states (except for pos)
+
 
         # propogate motion using particle's pos, and given state for vel and angular position
         particles[i,:] = quad.propogate_step(temp_state, control, Dt)[0:2] 

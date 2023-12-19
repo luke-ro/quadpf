@@ -3,6 +3,7 @@ import random
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import copy
+import time
 
 import quad
 import pf
@@ -75,26 +76,27 @@ def gen_surface(n=3, mode=0):
 if __name__==   "__main__":
     np.random.seed(3)
     n_steps = 41
-    num_particles = 4000
 
+    # time vector
     t = np.arange(0,Dt*n_steps,Dt)
 
+    #ground function
     surf_func = gen_surface(mode=1)
-    # propogate test
+
+    ## Motor forces stuff
     # x0 = [-116, -10, -.25, -5, 0, 0]
-    x0 = [-45, -60, 0, 15, 0, 0]
+    x0 = [-45, -90, 0, 15, 0, 0]
     motor_forces = np.ones([n_steps,2]) *.52
     controls = motorToControls(motor_forces,quad.ARM_LEN)
     # motor_forces[:,0] = 0.45 
     # motor_forces[:,1] = 0.55 
     # motor_forces[int(n_steps/2):,:] = .1
-    x = np.zeros([n_steps,6])
-    pf_pos_est = np.zeros([n_steps,2])
-    
-    x[0,:] = x0
 
     #initialize PF 
-    X = pf.initializeParticles(x_lim=[x0[0]-20,x0[0]+80], y_lim=[x0[1]-60,x0[1]+60],surface_func=surf_func,n=num_particles)
+    num_particles = 200
+    X = pf.initializeParticles(surface_func=surf_func,
+                               x_lim=[x0[0]-20,x0[0]+80], 
+                               n=num_particles)
     particle_history = np.zeros([n_steps,num_particles,2])
     particle_history[0,:,:] = X
 
@@ -104,35 +106,45 @@ if __name__==   "__main__":
     cm = cm.CM(surface_fun=surf_func,
                x0=x0_guess,
                search_lim=50,
-               match_interval=20)
+               match_interval=10)
     
+    # preallocate vectors for storing state estimates
+    pf_pos_est = np.zeros([n_steps,2])
     cm_pos_est = np.zeros([n_steps,2])
     cm_pos_est[0:2] = x0_guess[0:2]
+    #preallocate vector for keeping track of the true state
+    x = np.zeros([n_steps,6])
+    x[0,:] = x0
 
-    countour = []
+    countour = [] # list for plotting the contour 
 
     # loop through the motion
     for i in range(1,n_steps):
         print(f"Loop {i}")
 
-        #get true state
+        # get true state
         x[i,:] = quad.propogate_step(x[i-1,:],controls[:,i-1],Dt)
         print(f"state: {x[i,:]}")
 
-        #run particles filter
+        # get noisy measurement of agl
         alt_meas = abs(pf.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
 
-        #run cm
+        # run cm
+        cm_start = time.perf_counter()
         cm_state_est, x_cm, countour = cm.runCM(i,Dt,copy.copy(x[i-1,:]),copy.copy(controls[:,i-1]),alt_meas)
+        cm_stop = time.perf_counter()
         cm_pos_est[i,:] = cm_state_est[0:2]
-        X, curr_pos_est = pf.runMCL_step(X, copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt_meas, surface_func=surf_func,Dt=Dt)
+
+        # run particles filter
+        pf_start = time.perf_counter()
+        X, curr_pos_est = pf.runMCL_step(X, copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt_meas, surface_func=surf_func,Dt=Dt, oneD=True)
+        pf_stop = time.perf_counter()
         pf_pos_est[i,:] = curr_pos_est
-        # pos_est[i,1] = pf.get_estimate(X[:,1],0.25)
         particle_history[i,:,:] = X
 
 
-        print(f"PF est x pos: {pf_pos_est[i,0]}, y pos: {pf_pos_est[i,1]}")
-        print(f"CM est x pos: {cm_pos_est[0]}, y pos: {cm_pos_est[1]}")
+        print(f"({pf_stop-pf_start}) PF est x pos: {pf_pos_est[i,0]}, y pos: {pf_pos_est[i,1]}")
+        print(f"({cm_stop-cm_start}) CM est x pos: {cm_pos_est[0]}, y pos: {cm_pos_est[1]}")
 
 
     print(f"SSE {getSSE(x[3:,0:2],pf_pos_est[3:,:])}")
