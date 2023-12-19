@@ -7,7 +7,7 @@ import time
 import math
 
 import quad
-import pf
+import PF
 import cm
 
 Dt=0.6 # timestep for sim
@@ -104,7 +104,7 @@ if __name__==   "__main__":
 
     #initialize PF 
     num_particles = 200
-    pFilt = pf.ParticleFilter(surface_func=surf_func,
+    pFilt = PF.ParticleFilter(surface_func=surf_func,
                       x_lim=x_guess_bounds, 
                       n_partics=num_particles,
                       MPF=False)
@@ -137,7 +137,7 @@ if __name__==   "__main__":
         print(f"state: {x[i,:]}")
 
         # get noisy measurement of agl
-        alt_meas = abs(pf.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
+        alt_meas = abs(PF.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
 
         # run cm
         cm_start = time.perf_counter()
