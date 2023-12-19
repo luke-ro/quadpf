@@ -27,7 +27,7 @@ if __name__==   "__main__":
     ## Motor forces stuff and intial state
     # x0 = [-116, -10, -.25, -5, 0, 0]
     x0 = [0, -100, -.1, 5, -1, 0]
-    motor_forces = np.ones([n_steps,2]) *.49
+    motor_forces = np.ones([n_steps,2]) *.492
     controls = h.motorToControls(motor_forces,quad.ARM_LEN)
     # motor_forces[:,0] = 0.45 
     # motor_forces[:,1] = 0.55 

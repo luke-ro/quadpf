@@ -1,15 +1,5 @@
 import numpy as np
-import random
-import matplotlib.pyplot as plt
-import scipy.integrate as integrate
-import copy
-import time
 import math
-
-import quad
-import PF
-import CM
-import h
 
 def getSSE(x1, x2):
     if len(x1) != len(x2):
