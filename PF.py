@@ -33,7 +33,7 @@ class ParticleFilter:
         self.y_lim = y_lim
         self.n = n_partics
         self.oneD = oneD
-        X = self.initializeParticles()
+        self.X = self.initializeParticles()
 
     def getParticles(self):
         return copy.copy(self.X)
