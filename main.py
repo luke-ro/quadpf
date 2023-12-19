@@ -8,7 +8,7 @@ import math
 
 import quad
 import PF
-import cm
+import CM
 
 Dt=0.6 # timestep for sim
 
@@ -114,7 +114,7 @@ if __name__==   "__main__":
     # initialize contour matching
     x0_guess = np.zeros([6])
     x0_guess[0] = np.mean(x_guess_bounds)
-    cm = cm.CM(surface_fun=surf_func,
+    cm = CM.CM(surface_fun=surf_func,
                x_est_bounds=x_guess_bounds,
                match_interval=15)
     
