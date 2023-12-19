@@ -3,26 +3,33 @@ import numpy as np
 from copy import copy
 
 class CM:
-    def __init__(self, surface_fun, x_est_bounds, match_interval=10, match_res=0.25):
+    def __init__(self, surface_fun, x_est_bounds, match_interval=10, contour_len=10, match_res=0.25):
         self.surface_fun = surface_fun # ground function
         self.match_interval = match_interval #number of timesteps between countour matches
+        self.contour_len = contour_len
         self.x_est = [np.mean(x_est_bounds)]
         self.res = match_res
         self.search_lim = abs(x_est_bounds[1]-x_est_bounds[0])/2
         self.contour_x = [0]
 
     
-    contour = [] #countour of ground (dynamics accounted for)
+    contour = [0] #countour of ground (dynamics accounted for)
     
     ## checks a contour (dynamics accoutne for)
     def checkMatch(self, agl):
-        d = self.contour_x[-self.match_interval+1:]
+        if len(self.contour_x)>self.contour_len+1:
+            left_bound = self.contour_len+1
+        else:
+            left_bound = len(self.contour_x)-1
+
+        d = self.contour_x[-left_bound:]
+
         offset = np.min(d)
         d = d - offset# zero the x locs
         xx = np.arange(self.x_est[-1]-self.search_lim, self.x_est[-1]+self.search_lim, self.res)
         MAD = np.zeros([len(xx)])
         for i in range(len(xx)):
-            temp_contour = self.contour[-self.match_interval+1:] - self.contour[-self.match_interval+1] + self.surface_fun(xx[i]+d[0])
+            temp_contour = self.contour[-left_bound:] - self.contour[-left_bound] + self.surface_fun(xx[i]+d[0])
             # temp_contour = self.contour[-self.match_interval+1:] - self.surface_fun(d[0])
             for j in range(len(d)):
                 MAD[i] += abs(temp_contour[j]-self.surface_fun(xx[i]+d[j]))
@@ -48,5 +55,5 @@ class CM:
 
 
         self.x_est = np.vstack([self.x_est, mu_x[0]])
-        return np.array(mu_x), copy(self.x_est), copy(self.contour)
+        return np.array(mu_x), copy(self.contour_x), copy(self.contour)
 

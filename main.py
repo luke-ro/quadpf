@@ -41,7 +41,7 @@ if __name__==   "__main__":
     pFilt = PF.ParticleFilter(surface_func=surf_func,
                       x_lim=x_guess_bounds, 
                       n_partics=num_particles,
-                      MPF=False)
+                      MPF=True)
     particle_history = np.zeros([n_steps,num_particles,2])
     particle_history[0,:,:] = pFilt.getParticles()
 
@@ -96,7 +96,7 @@ if __name__==   "__main__":
 
     ## contour from CM plot
     fig,ax = plt.subplots()
-    ax.plot(x_cm[1:,0], countour)
+    ax.plot(x_cm, countour)
     ax.set_title("countour")
     ax.invert_yaxis()
 

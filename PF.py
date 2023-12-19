@@ -32,6 +32,7 @@ class ParticleFilter:
         self.x_lim = x_lim
         self.y_lim = y_lim
         self.n = n_partics
+        self.MPF_on = MPF
         self.oneD = oneD
         self.X = self.initializeParticles()
 
@@ -87,13 +88,30 @@ class ParticleFilter:
             diff = abs(alt_meas-abs(self.X[i,1]-self.surface_func(self.X[i,0])))
             probs[i] = stats.norm.cdf(-diff,scale=ALT_NOISE_STD) # two tailed distrobution probabilty of getting a worse or same measurement
 
+        if self.MPF_on:
+            mu = np.mean(self.X[0,:])
+            x_bound = (self.x_lim[1]-self.x_lim[0])/2
+
+            n_aug = int(.1*self.n)
+            X_aug = np.zeros([n_aug,2])
+            X_aug[:,0] = np.random.uniform(mu-x_bound, mu+x_bound, size=n_aug)
+            probs_aug = np.zeros(len(X_aug))
+            for i in range(len(X_aug)):
+                diff = abs(alt_meas-abs(X_aug[i,1]-self.surface_func(X_aug[i,0])))
+                probs_aug[i] = stats.norm.cdf(-diff,scale=ALT_NOISE_STD) 
+            
+            self.X = np.vstack([self.X,X_aug])
+            probs = np.concatenate([probs,probs_aug])
+            
+
+
         # normalize probabilities to one
         probs = probs/np.sum(probs)
 
         #get a cdf of current X
-        probs_cdf=np.zeros(n)
+        probs_cdf=np.zeros(len(probs))
         probs_cdf[0] = probs[0]
-        for i in range(1,n):
+        for i in range(1,len(probs)):
             probs_cdf[i] = probs_cdf[i-1]+probs[i]
         
         # Resample using a uniform dist and the cdf

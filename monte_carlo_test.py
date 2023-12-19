@@ -43,7 +43,7 @@ if __name__==   "__main__":
     error_pf = np.zeros([n_runs,n_steps])
     error_cm = np.zeros([n_runs,n_steps])
 
-    # loop through the motion
+    # Monte carlo outer loop
     for k in range(0,n_runs):
         print(f"MC Iteration {k}")
 
@@ -60,6 +60,8 @@ if __name__==   "__main__":
         x0[3] =    5
         x0[4] =   -1
         x0[5] =    0
+
+        print(f"Random state: {x0}")
 
         # x0 = [0, -100, -.1, 5, -1, 0]
         # motor_forces = np.ones([n_steps,2]) *.492
@@ -82,7 +84,8 @@ if __name__==   "__main__":
         x0_guess[0] = np.mean(x_guess_bounds)
         cm = CM.CM(surface_fun=surf_func,
                    x_est_bounds=x_guess_bounds,
-                   match_interval=10)
+                   match_interval=10,
+                   contour_len=10)
         
         # preallocate vectors for storing state estimates
         pf_x_est = np.zeros([n_steps,2])
@@ -93,7 +96,7 @@ if __name__==   "__main__":
         for i in range(1,n_steps):
             # get true state
             x[i,:] = quad.propogate_step(x[i-1,:],controls[:,i-1],Dt)
-            print(f"state: {x[i,:]}")
+            # print(f"state: {x[i,:]}")
 
             # get noisy measurement of agl
             alt_meas = abs(PF.getNoisyMeas(x[i,0],x[i,1],surface_fun=copy.copy(surf_func)))
@@ -117,13 +120,13 @@ if __name__==   "__main__":
             error_pf[k,i] = pf_pos[0] - x[i,0]
             error_cm[k,i] = cm_pos[0] - x[i,0]
 
-        anim = quad.animate_traj(traj=x, 
-                            particles=particle_history, 
-                            cm_est=cm_x_est, 
-                            surface=surf_func,
-                            frame_time=200,
-                            xlim = (-200,700))
-        plt.show()
+        # anim = quad.animate_traj(traj=x, 
+        #                     particles=particle_history, 
+        #                     cm_est=cm_x_est, 
+        #                     surface=surf_func,
+        #                     frame_time=50,
+        #                     xlim = (-200,700))
+        # plt.show()
 
     np.save("/home/user/repos/quadpf/mc_runs/comp_times_pf.npy",comp_times_pf)
     np.save("/home/user/repos/quadpf/mc_runs/comp_times_cm.npy",comp_times_cm)
