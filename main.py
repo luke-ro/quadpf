@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import copy
 import time
+import math
 
 import quad
 import pf
@@ -63,9 +64,15 @@ def gen_surface(n=3, mode=0):
     elif mode==1:
         yf = np.load("/home/user/repos/quadpf/data/lunar_contour.npy")
         yf = -yf/2
-        xf = np.linspace(-250,250,len(yf))
+        xf = np.linspace(0,500,len(yf))
 
         def f_final(x):
+            if x>500:
+                return np.interp(math.fmod(x,500),xf,yf)
+            if x<0:
+                x = math.fmod(x,500)
+                x = 500 + x
+                return np.interp(x,xf,yf)
             return np.interp(x,xf,yf)
 
         return f_final
@@ -75,7 +82,7 @@ def gen_surface(n=3, mode=0):
 
 if __name__==   "__main__":
     np.random.seed(3)
-    n_steps = 41
+    n_steps = 80
 
     # time vector
     t = np.arange(0,Dt*n_steps,Dt)
@@ -83,30 +90,33 @@ if __name__==   "__main__":
     #ground function
     surf_func = gen_surface(mode=1)
 
-    ## Motor forces stuff
+    ## Motor forces stuff and intial state
     # x0 = [-116, -10, -.25, -5, 0, 0]
-    x0 = [-45, -90, 0, 15, 0, 0]
-    motor_forces = np.ones([n_steps,2]) *.52
+    x0 = [0, -100, -.1, 5, -1, 0]
+    motor_forces = np.ones([n_steps,2]) *.49
     controls = motorToControls(motor_forces,quad.ARM_LEN)
     # motor_forces[:,0] = 0.45 
     # motor_forces[:,1] = 0.55 
     # motor_forces[int(n_steps/2):,:] = .1
 
+    # initial guess for filters:
+    x_guess_bounds = (-100,100)
+
     #initialize PF 
     num_particles = 200
-    X = pf.initializeParticles(surface_func=surf_func,
-                               x_lim=[x0[0]-20,x0[0]+80], 
-                               n=num_particles)
+    pFilt = pf.ParticleFilter(surface_func=surf_func,
+                      x_lim=x_guess_bounds, 
+                      n_partics=num_particles,
+                      MPF=False)
     particle_history = np.zeros([n_steps,num_particles,2])
-    particle_history[0,:,:] = X
+    particle_history[0,:,:] = pFilt.getParticles()
 
     # initialize contour matching
     x0_guess = np.zeros([6])
-    x0_guess[0] = -100
+    x0_guess[0] = np.mean(x_guess_bounds)
     cm = cm.CM(surface_fun=surf_func,
-               x0=x0_guess,
-               search_lim=50,
-               match_interval=10)
+               x_est_bounds=x_guess_bounds,
+               match_interval=15)
     
     # preallocate vectors for storing state estimates
     pf_pos_est = np.zeros([n_steps,2])
@@ -137,7 +147,7 @@ if __name__==   "__main__":
 
         # run particles filter
         pf_start = time.perf_counter()
-        X, curr_pos_est = pf.runMCL_step(X, copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt_meas, surface_func=surf_func,Dt=Dt, oneD=True)
+        X, curr_pos_est = pFilt.runMCL_step(copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt_meas, Dt=Dt)
         pf_stop = time.perf_counter()
         pf_pos_est[i,:] = curr_pos_est
         particle_history[i,:,:] = X
@@ -186,7 +196,7 @@ if __name__==   "__main__":
                              cm_est=cm_pos_est, 
                              surface=surf_func,
                              frame_time=200,
-                             xlim = (-100,200))
+                             xlim = (-200,700))
 
 
     anim.save('pf_animation.gif',  
