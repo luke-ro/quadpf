@@ -9,13 +9,14 @@ class CM:
         self.x_est = [np.mean(x_est_bounds)]
         self.res = match_res
         self.search_lim = abs(x_est_bounds[1]-x_est_bounds[0])/2
+        self.contour_x = [0]
 
     
     contour = [] #countour of ground (dynamics accounted for)
     
     ## checks a contour (dynamics accoutne for)
     def checkMatch(self, agl):
-        d = self.x_est[-self.match_interval+1:]
+        d = self.contour_x[-self.match_interval+1:]
         offset = np.min(d)
         d = d - offset# zero the x locs
         xx = np.arange(self.x_est[-1]-self.search_lim, self.x_est[-1]+self.search_lim, self.res)
@@ -39,6 +40,7 @@ class CM:
         mu_x_prev[0] = self.x_est[-1]
 
         mu_x = quad.propogate_step(mu_x_prev, u_prev, Dt)
+        self.contour_x.append(self.contour_x[-1]+(mu_x[0]-mu_x_prev[0]))
         self.contour.append(mu_x[1]+meas)
 
         if k%self.match_interval==0:

@@ -29,9 +29,6 @@ if __name__==   "__main__":
     motor_forces = np.ones([n_steps,2]) *.492
     controls = h.motorToControls(motor_forces,quad.ARM_LEN)
 
-    # initial guess for filters:
-    x_guess_bounds = (-100,100)
-    x_rand_bounds = (-50,50)
 
     #initialize PF 
     num_particles = 200
@@ -50,18 +47,23 @@ if __name__==   "__main__":
     for k in range(0,n_runs):
         print(f"MC Iteration {k}")
 
-        #initial start state:
-        # x0 = np.zeros([6])
-        # x0[0] = np.random.uniform(x_rand_bounds[0],x_rand_bounds[1])
-        # x0[1] =  -70
-        # x0[2] =  -.1
-        # x0[3] =    5
-        # x0[4] =   -1
-        # x0[5] =    0
+        # initial guess for filters:
+        mu_x = np.random.uniform(0,500)
+        x_rand_bounds = (-50,50)
+        x_guess_bounds = (mu_x-100,mu_x+100)
 
-        x0 = [0, -100, -.1, 5, -1, 0]
-        motor_forces = np.ones([n_steps,2]) *.492
-        controls = h.motorToControls(motor_forces,quad.ARM_LEN)
+        #initial start state:
+        x0 = np.zeros([6])
+        x0[0] = np.random.uniform(mu_x-x_rand_bounds[0],mu_x+x_rand_bounds[1])
+        x0[1] =  -70
+        x0[2] =  -.1
+        x0[3] =    5
+        x0[4] =   -1
+        x0[5] =    0
+
+        # x0 = [0, -100, -.1, 5, -1, 0]
+        # motor_forces = np.ones([n_steps,2]) *.492
+        # controls = h.motorToControls(motor_forces,quad.ARM_LEN)
 
         #preallocate vector for keeping track of the true state
         x = np.zeros([n_steps,6])
@@ -72,6 +74,8 @@ if __name__==   "__main__":
                                 x_lim=x_guess_bounds, 
                                 n_partics=num_particles,
                                 MPF=False)
+        particle_history = np.zeros([n_steps,num_particles,2])
+        particle_history[0,:,:] = pFilt.getParticles()
         
             # initialize contour matching
         x0_guess = np.zeros([6])
@@ -99,6 +103,7 @@ if __name__==   "__main__":
             X, pf_pos = pFilt.runMCL_step(copy.copy(x[i-1,:]), copy.copy(controls[:,i-1]), alt_meas, Dt=Dt)
             pf_stop = time.perf_counter()
             pf_x_est[i,0:2] = pf_pos[0:2]
+            particle_history[i,:,:] = X
 
             # run cm
             cm_start = time.perf_counter()
@@ -111,6 +116,14 @@ if __name__==   "__main__":
 
             error_pf[k,i] = pf_pos[0] - x[i,0]
             error_cm[k,i] = cm_pos[0] - x[i,0]
+
+        anim = quad.animate_traj(traj=x, 
+                            particles=particle_history, 
+                            cm_est=cm_x_est, 
+                            surface=surf_func,
+                            frame_time=200,
+                            xlim = (-200,700))
+        plt.show()
 
     np.save("/home/user/repos/quadpf/mc_runs/comp_times_pf.npy",comp_times_pf)
     np.save("/home/user/repos/quadpf/mc_runs/comp_times_cm.npy",comp_times_cm)
@@ -125,8 +138,8 @@ if __name__==   "__main__":
 
 
     fig,ax = plt.subplots()
-    ax.plot(t,np.mean(error_pf,0),label="PF")
-    ax.plot(t,np.mean(error_cm,0),label="CM")
+    ax.plot(t,np.mean(error_pf,0),label="PF",linestyle="solid")
+    ax.plot(t,np.mean(error_cm,0),label="CM",linestyle="solid")
     ax.set_title("Mean error from true")
     ax.legend()
 
