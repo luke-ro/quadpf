@@ -50,7 +50,7 @@ class CM:
         self.contour_x.append(self.contour_x[-1]+(mu_x[0]-mu_x_prev[0]))
         self.contour.append(mu_x[1]+meas)
 
-        if k%self.match_interval==0:
+        if k%self.match_interval==0 and k>self.contour_len:
             mu_x[0] = self.checkMatch(meas)
 
 

@@ -1,13 +1,18 @@
 import numpy as np
 import math
 
+
+def getNoisyMeas(x,z,surface_fun,std_dev):
+    return abs(z-surface_fun(x) + np.random.normal(0,std_dev))
+    # return abs(z-surface_fun(x))
+
 def getSSE(x1, x2):
     if len(x1) != len(x2):
         Exception("getSEE(): Vectors are not the same length")
 
     sum = 0
     for i in range(len(x1)):
-        sum += np.linalg.norm(x1[i,:]-x2[i,:])**2
+        sum += np.linalg.norm(x1[i,0]-x2[i,0])**2
 
     return sum
 
@@ -31,7 +36,40 @@ def motorToControls(motor_controls, l_arm):
     return u
 
 def gen_surface(n=3, mode=0):
-    if mode==0:
+
+    if mode==1:
+        yf = np.load("/home/user/repos/quadpf/data/lunar_contour.npy")
+        yf = -yf/2
+        xf = np.linspace(0,500,len(yf))
+
+        def f_final(x):
+            if x>500:
+                return np.interp(math.fmod(x,500),xf,yf)
+            if x<0:
+                x = math.fmod(x,500)
+                x = 500 + x
+                return np.interp(x,xf,yf)
+            return np.interp(x,xf,yf)
+
+        return f_final
+    
+    if mode==2:
+        yf = np.load("/home/user/repos/quadpf/data/lunar_contour_slopy.npy")
+        yf = -yf/2
+        xf = np.linspace(0,500,len(yf))
+
+        def f_final(x):
+            if x>500:
+                return np.interp(500-math.fmod(x,500),xf,yf)
+            if x<0:
+                x = math.fmod(x,500)
+                x = abs(x) 
+                return np.interp(x,xf,yf)
+            return np.interp(x,xf,yf)
+
+        return f_final
+    
+    else: #mode 0
         sines = []
         f_cos = lambda x,a,b,c : a*np.cos(b*(x+c))
         sines.append(lambda x : 5*np.cos(2*3.14/400*x)+10)
@@ -50,21 +88,4 @@ def gen_surface(n=3, mode=0):
         # print([func(0) for func in sines])
         # print(f_final(0))
         return f_final
-    elif mode==1:
-        yf = np.load("/home/user/repos/quadpf/data/lunar_contour.npy")
-        yf = -yf/2
-        xf = np.linspace(0,500,len(yf))
 
-        def f_final(x):
-            if x>500:
-                return np.interp(math.fmod(x,500),xf,yf)
-            if x<0:
-                x = math.fmod(x,500)
-                x = 500 + x
-                return np.interp(x,xf,yf)
-            return np.interp(x,xf,yf)
-
-        return f_final
-
-
-    return f_final

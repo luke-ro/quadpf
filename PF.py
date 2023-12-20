@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import quad
 import copy
 
-ALT_NOISE_STD = 1 #std dev of altimeter measurements
 
 def get_estimate(x,step):
     x_min = np.min(x)
@@ -22,19 +21,18 @@ def get_estimate(x,step):
 
     return bins[idx] + (step/2) 
 
-def getNoisyMeas(x,z,surface_fun):
-    return abs(z-surface_fun(x) + np.random.normal(0,ALT_NOISE_STD))
-    # return abs(z-surface_fun(x))
-
 class ParticleFilter:
-    def __init__(self, surface_func, x_lim, y_lim=None, n_partics=100, MPF=False, oneD=True):
+    def __init__(self, surface_func, meas_std, x_lim, y_lim=None, n_partics=100, MPF=False, oneD=True, y_init=0):
         self.surface_func = surface_func
+        self.meas_std = meas_std
         self.x_lim = x_lim
         self.y_lim = y_lim
         self.n = n_partics
         self.MPF_on = MPF
         self.oneD = oneD
         self.X = self.initializeParticles()
+        self.X[:,1] = y_init
+        self.probs = np.ones([n_partics])/n_partics
 
     def getParticles(self):
         return copy.copy(self.X)
@@ -67,7 +65,7 @@ class ParticleFilter:
     def runMCL_step(self, x_prev, control, meas, Dt):
         n = len(self.X)
         alt_meas = meas
-        probs = np.zeros([n])
+        
         for i in range(len(self.X)):
             #given at location specified by particle, what are the odds you'd be there?
 
@@ -86,7 +84,7 @@ class ParticleFilter:
             # add noise?
 
             diff = abs(alt_meas-abs(self.X[i,1]-self.surface_func(self.X[i,0])))
-            probs[i] = stats.norm.cdf(-diff,scale=ALT_NOISE_STD) # two tailed distrobution probabilty of getting a worse or same measurement
+            self.probs[i] = stats.norm.cdf(-diff,scale=self.meas_std) # two tailed distrobution probabilty of getting a worse or same measurement
 
         if self.MPF_on:
             mu = np.mean(self.X[0,:])
@@ -95,28 +93,31 @@ class ParticleFilter:
             n_aug = int(.1*self.n)
             X_aug = np.zeros([n_aug,2])
             X_aug[:,0] = np.random.uniform(mu-x_bound, mu+x_bound, size=n_aug)
+            X_aug[:,1] = self.X[0,1]
             probs_aug = np.zeros(len(X_aug))
             for i in range(len(X_aug)):
                 diff = abs(alt_meas-abs(X_aug[i,1]-self.surface_func(X_aug[i,0])))
-                probs_aug[i] = stats.norm.cdf(-diff,scale=ALT_NOISE_STD) 
+                probs_aug[i] = stats.norm.cdf(-diff,scale=self.meas_std)/n_aug #normalize by n_aug
             
             self.X = np.vstack([self.X,X_aug])
-            probs = np.concatenate([probs,probs_aug])
+            self.probs = np.concatenate([self.probs,probs_aug])
             
 
 
         # normalize probabilities to one
-        probs = probs/np.sum(probs)
+        self.probs = self.probs/np.sum(self.probs)
 
         #get a cdf of current X
-        probs_cdf=np.zeros(len(probs))
-        probs_cdf[0] = probs[0]
-        for i in range(1,len(probs)):
-            probs_cdf[i] = probs_cdf[i-1]+probs[i]
+        probs_cdf=np.zeros(len(self.probs))
+        probs_cdf[0] = self.probs[0]
+        for i in range(1,len(self.probs)):
+            probs_cdf[i] = probs_cdf[i-1]+self.probs[i]
         
         # Resample using a uniform dist and the cdf
         rands = np.random.rand(n)
-        new_particles = np.array([self.X[np.argmax(probs_cdf>rands[i])] for i in range(n)])
+        idxs = np.array([np.argmax(probs_cdf>rands[i]) for i in range(n)])
+        new_particles = self.X[idxs]
+        self.probs = self.probs[idxs]
 
         x_est = get_estimate(new_particles[:,0],0.25)
         y_est = get_estimate(new_particles[:,1],0.25)
